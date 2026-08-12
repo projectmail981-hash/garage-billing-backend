@@ -3,7 +3,7 @@ const express = require("express");
 const router = express.Router();
 
 const controller =
-require("../controllers/jobServiceController");
+require("../controllers/jobserviceController");
 
 router.get("/", controller.getAllJobServices);
 

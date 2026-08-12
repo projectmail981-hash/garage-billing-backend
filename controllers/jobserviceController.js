@@ -1,4 +1,4 @@
-const JobService = require("../models/jobServiceModel");
+const JobService = require("../models/jobserviceModel");
 
 // Get All
 exports.getAllJobServices = (req, res) => {

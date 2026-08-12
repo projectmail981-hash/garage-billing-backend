@@ -1,4 +1,4 @@
-const JobCard = require("../models/jobCardModel");
+const JobCard = require("../models/jobcardModel");
 
 exports.getJobCards = (req, res) => {
 

@@ -3,7 +3,7 @@ const express = require("express");
 const router = express.Router();
 
 const jobCardController =
-require("../controllers/jobCardController");
+require("../controllers/jobcardController");
 
 router.get("/", jobCardController.getJobCards);
 
