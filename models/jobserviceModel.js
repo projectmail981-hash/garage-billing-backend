@@ -2,7 +2,6 @@ const db = require("../config/db");
 
 // Get all job services
 const getAllJobServices = (callback) => {
-
     const sql = `
     SELECT
         js.job_service_id,
@@ -10,19 +9,18 @@ const getAllJobServices = (callback) => {
         s.service_name,
         js.quantity,
         js.labour_charge,
-        js.total_amount
+        js.total_amount,
+        js.is_completed
     FROM job_services js
     JOIN services s
     ON js.service_id = s.service_id
     ORDER BY js.job_service_id DESC
     `;
-
     db.query(sql, callback);
 };
 
 // Get services by Job ID
 const getJobServicesByJobId = (jobId, callback) => {
-
     const sql = `
     SELECT
         js.job_service_id,
@@ -30,19 +28,18 @@ const getJobServicesByJobId = (jobId, callback) => {
         s.service_name,
         js.quantity,
         js.labour_charge,
-        js.total_amount
+        js.total_amount,
+        js.is_completed
     FROM job_services js
     JOIN services s
     ON js.service_id = s.service_id
     WHERE js.job_id = ?
     `;
-
     db.query(sql, [jobId], callback);
 };
 
 // Add Job Service
 const addJobService = (service, callback) => {
-
     const totalAmount =
         service.quantity * service.labour_charge;
 
@@ -53,9 +50,10 @@ const addJobService = (service, callback) => {
         service_id,
         quantity,
         labour_charge,
-        total_amount
+        total_amount,
+        is_completed
     )
-    VALUES (?,?,?,?,?)
+    VALUES (?,?,?,?,?,?)
     `;
 
     db.query(
@@ -65,7 +63,8 @@ const addJobService = (service, callback) => {
             service.service_id,
             service.quantity,
             service.labour_charge,
-            totalAmount
+            totalAmount,
+            false
         ],
         callback
     );
@@ -73,7 +72,6 @@ const addJobService = (service, callback) => {
 
 // Update Job Service
 const updateJobService = (id, service, callback) => {
-
     const totalAmount =
         service.quantity * service.labour_charge;
 
@@ -98,9 +96,18 @@ const updateJobService = (id, service, callback) => {
     );
 };
 
+// Toggle Job Service Status
+const toggleJobServiceStatus = (id, isCompleted, callback) => {
+    const sql = `
+    UPDATE job_services
+    SET is_completed = ?
+    WHERE job_service_id = ?
+    `;
+    db.query(sql, [isCompleted, id], callback);
+};
+
 // Delete Job Service
 const deleteJobService = (id, callback) => {
-
     const sql =
     "DELETE FROM job_services WHERE job_service_id=?";
 
@@ -108,11 +115,10 @@ const deleteJobService = (id, callback) => {
 };
 
 module.exports = {
-
     getAllJobServices,
     getJobServicesByJobId,
     addJobService,
     updateJobService,
+    toggleJobServiceStatus,
     deleteJobService
-
 };

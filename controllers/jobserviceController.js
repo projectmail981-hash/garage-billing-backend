@@ -62,28 +62,33 @@ exports.addJobService = (req, res) => {
 
 // Update
 exports.updateJobService = (req, res) => {
-
     JobService.updateJobService(
-
         req.params.id,
-
         req.body,
-
         (err) => {
-
             if (err)
                 return res.status(500).json(err);
-
             res.json({
-
                 message: "Updated Successfully"
-
             });
-
         }
-
     );
+};
 
+// Toggle Status
+exports.toggleJobServiceStatus = (req, res) => {
+    const isCompleted = req.body.is_completed;
+    JobService.toggleJobServiceStatus(
+        req.params.id,
+        isCompleted,
+        (err) => {
+            if (err)
+                return res.status(500).json(err);
+            res.json({
+                message: "Status Toggled Successfully"
+            });
+        }
+    );
 };
 
 // Delete

@@ -26,8 +26,9 @@ const getDashboard = (callback) => {
     ) AS labourRevenue,
 
     (
-        SELECT IFNULL(SUM(total_amount),0)
-        FROM job_parts
+        SELECT IFNULL(SUM(jp.quantity * (jp.unit_price - IFNULL(i.unit_price, jp.unit_price))), 0)
+        FROM job_parts jp
+        LEFT JOIN inventory i ON jp.part_id = i.part_id
     ) AS partsRevenue,
 
     (

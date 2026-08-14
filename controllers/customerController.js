@@ -5,9 +5,10 @@ exports.getCustomers = (req, res) => {
 
     Customer.getAllCustomers((err, results) => {
 
-        if (err)
+        if (err) {
+            console.error("Customers Error:", err);
             return res.status(500).json(err);
-
+        }
         res.json(results);
 
     });

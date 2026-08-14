@@ -12,6 +12,7 @@ router.get("/:jobId", controller.getJobPartsByJobId);
 router.post("/", controller.addJobPart);
 
 router.put("/:id", controller.updateJobPart);
+router.put("/:id/toggle-status", controller.toggleJobPartStatus);
 
 router.delete("/:id", controller.deleteJobPart);
 

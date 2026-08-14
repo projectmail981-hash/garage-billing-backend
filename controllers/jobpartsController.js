@@ -42,9 +42,10 @@ exports.addJobPart = (req, res) => {
         req.body,
 
         (err, result) => {
-
-            if (err)
+            if (err) {
+                console.error("Add Job Part Error:", err);
                 return res.status(500).json(err);
+            }
 
             res.status(201).json({
 
@@ -62,28 +63,33 @@ exports.addJobPart = (req, res) => {
 
 // Update
 exports.updateJobPart = (req, res) => {
-
     JobPart.updateJobPart(
-
         req.params.id,
-
         req.body,
-
         (err) => {
-
             if (err)
                 return res.status(500).json(err);
-
             res.json({
-
                 message: "Updated Successfully"
-
             });
-
         }
-
     );
+};
 
+// Toggle Status
+exports.toggleJobPartStatus = (req, res) => {
+    const isCompleted = req.body.is_completed;
+    JobPart.toggleJobPartStatus(
+        req.params.id,
+        isCompleted,
+        (err) => {
+            if (err)
+                return res.status(500).json(err);
+            res.json({
+                message: "Status Toggled Successfully"
+            });
+        }
+    );
 };
 
 // Delete

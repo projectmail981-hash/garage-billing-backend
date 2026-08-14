@@ -4,8 +4,10 @@ exports.getDashboard = (req, res) => {
 
     Dashboard.getDashboard((err, result) => {
 
-        if (err)
+        if (err) {
+            console.error("Dashboard Error:", err);
             return res.status(500).json(err);
+        }
 
         res.json(result);
 

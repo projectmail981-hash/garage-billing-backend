@@ -17,7 +17,6 @@ const getInventoryById = (id, callback) => {
     );
 };
 
-// Add part
 const addInventory = (part, callback) => {
 
     const sql = `
@@ -27,9 +26,11 @@ const addInventory = (part, callback) => {
         category,
         stock_quantity,
         unit_price,
+        mrp,
+        selling_price,
         supplier
     )
-    VALUES (?,?,?,?,?)
+    VALUES (?,?,?,?,?,?,?)
     `;
 
     db.query(sql, [
@@ -37,12 +38,13 @@ const addInventory = (part, callback) => {
         part.category,
         part.stock_quantity,
         part.unit_price,
+        part.mrp,
+        part.selling_price,
         part.supplier
     ], callback);
 
 };
 
-// Update part
 const updateInventory = (id, part, callback) => {
 
     const sql = `
@@ -52,6 +54,8 @@ const updateInventory = (id, part, callback) => {
         category=?,
         stock_quantity=?,
         unit_price=?,
+        mrp=?,
+        selling_price=?,
         supplier=?
     WHERE part_id=?
     `;
@@ -61,6 +65,8 @@ const updateInventory = (id, part, callback) => {
         part.category,
         part.stock_quantity,
         part.unit_price,
+        part.mrp,
+        part.selling_price,
         part.supplier,
         id
     ], callback);

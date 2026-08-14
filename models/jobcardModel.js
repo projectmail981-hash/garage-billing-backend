@@ -55,7 +55,8 @@ const getJobCardById = (id, callback) => {
             service_name,
             quantity,
             labour_charge,
-            total_amount
+            total_amount,
+            is_completed
         FROM job_services
         WHERE job_id = ?
         `;
@@ -71,7 +72,8 @@ const getJobCardById = (id, callback) => {
                 part_name,
                 quantity,
                 unit_price,
-                total_amount
+                total_amount,
+                is_completed
             FROM job_parts
             WHERE job_id = ?
             `;
@@ -136,7 +138,6 @@ const createJobCard = (job, callback) => {
 };
 
 const addJobService = (jobId, service, callback) => {
-
     const sql = `
     INSERT INTO job_services
     (
@@ -144,11 +145,11 @@ const addJobService = (jobId, service, callback) => {
         service_name,
         quantity,
         labour_charge,
-        total_amount
+        total_amount,
+        is_completed
     )
-    VALUES (?,?,?,?,?)
+    VALUES (?,?,?,?,?,?)
     `;
-
     db.query(
         sql,
         [
@@ -156,40 +157,52 @@ const addJobService = (jobId, service, callback) => {
             service.service_name,
             service.quantity,
             service.labour_charge,
-            service.total_amount
+            service.total_amount,
+            false
         ],
         callback
     );
-
 };
 
-
 const addJobPart = (jobId, part, callback) => {
-
     const sql = `
     INSERT INTO job_parts
     (
         job_id,
+        part_id,
         part_name,
         quantity,
         unit_price,
-        total_amount
+        total_amount,
+        is_completed
     )
-    VALUES (?,?,?,?,?)
+    VALUES (?,?,?,?,?,?,?)
     `;
-
     db.query(
         sql,
         [
             jobId,
+            part.part_id,
             part.part_name,
             part.quantity,
             part.unit_price,
-            part.total_amount
+            part.total_amount,
+            false
         ],
-        callback
-    );
+        (err, result) => {
+            if (err) return callback(err);
 
+            if (part.part_id) {
+                const stockSql = "UPDATE inventory SET stock_quantity = stock_quantity - ? WHERE part_id = ?";
+                db.query(stockSql, [part.quantity, part.part_id], (err2) => {
+                    if (err2) console.error("Failed to deduct stock during job creation", err2);
+                    callback(null, result);
+                });
+            } else {
+                callback(null, result);
+            }
+        }
+    );
 };
 
 const searchJobCards = (keyword, callback) => {
