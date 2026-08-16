@@ -17,6 +17,7 @@ const jobServiceRoutes = require("./routes/jobserviceRoutes");
 const jobPartRoutes = require("./routes/jobpartsRoutes");
 const invoiceRoutes =require("./routes/invoiceRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
+const expenseRoutes = require("./routes/expenseRoutes");
 
 app.use("/dashboard", dashboardRoutes);
 app.use("/customers", customerRoutes);
@@ -27,6 +28,7 @@ app.use("/invoices", invoiceRoutes);
 app.use("/jobcards", jobCardRoutes);
 app.use("/jobservices", jobServiceRoutes);
 app.use("/jobparts", jobPartRoutes);
+app.use("/expenses", expenseRoutes);
 
 app.listen(process.env.PORT,()=>{
 

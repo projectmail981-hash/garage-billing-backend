@@ -1,7 +1,7 @@
 const db = require("../config/db");
 
 // Dashboard Summary
-const getDashboard = (callback) => {
+const getDashboard = async (callback) => {
 
     const sql = `
     SELECT
@@ -84,33 +84,54 @@ WHERE i.balance_amount > 0
 ORDER BY i.invoice_date DESC
 LIMIT 5
 `;
-console.log("Dashboard Query");
 
-db.query(sql, (err, dashboard) => {
-console.log("Dashboard Done");
+const weeklyChartSql = `
+SELECT DATE(invoice_date) as date, SUM(total_amount) as total
+FROM invoices
+WHERE WEEK(invoice_date)=WEEK(CURDATE()) AND YEAR(invoice_date)=YEAR(CURDATE())
+GROUP BY DATE(invoice_date)
+ORDER BY date ASC
+`;
 
-    if (err) return callback(err);
-     console.log("Recent Query");
+const monthlyChartSql = `
+SELECT WEEK(invoice_date) as week, SUM(total_amount) as total
+FROM invoices
+WHERE MONTH(invoice_date)=MONTH(CURDATE()) AND YEAR(invoice_date)=YEAR(CURDATE())
+GROUP BY WEEK(invoice_date)
+ORDER BY week ASC
+`;
 
-    db.query(recentSql, (err, recentInvoices) => {
-console.log("Recent Done");
-        if (err) return callback(err);
-console.log("Pending Query");
-        db.query(pendingSql, (err, pendingInvoices) => {
- console.log("Pending Done");
-            if (err) return callback(err);
-console.log("Sending Response");
-            callback(null, {
-                ...dashboard[0],
-                recentInvoices,
-                pendingInvoices
-            });
+console.log("Dashboard Query via Promise.all");
 
-        });
+try {
+    const promisePool = db.promise();
+    
+    const [
+        [dashboardRows],
+        [recentInvoices],
+        [pendingInvoices],
+        [weeklyChart],
+        [monthlyChart]
+    ] = await Promise.all([
+        promisePool.query(sql),
+        promisePool.query(recentSql),
+        promisePool.query(pendingSql),
+        promisePool.query(weeklyChartSql),
+        promisePool.query(monthlyChartSql)
+    ]);
 
+    console.log("Sending Response");
+    callback(null, {
+        ...dashboardRows[0],
+        recentInvoices,
+        pendingInvoices,
+        weeklyChart,
+        monthlyChart
     });
-
-});
+} catch (err) {
+    console.error("Dashboard Query Error:", err);
+    callback(err);
+}
 
 };
 
