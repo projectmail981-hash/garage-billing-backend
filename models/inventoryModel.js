@@ -28,9 +28,10 @@ const addInventory = (part, callback) => {
         unit_price,
         mrp,
         selling_price,
-        supplier
+        supplier,
+        date
     )
-    VALUES (?,?,?,?,?,?,?)
+    VALUES (?,?,?,?,?,?,?,?)
     `;
 
     db.query(sql, [
@@ -40,7 +41,8 @@ const addInventory = (part, callback) => {
         part.unit_price,
         part.mrp,
         part.selling_price,
-        part.supplier
+        part.supplier,
+        part.date
     ], callback);
 
 };
@@ -56,7 +58,8 @@ const updateInventory = (id, part, callback) => {
         unit_price=?,
         mrp=?,
         selling_price=?,
-        supplier=?
+        supplier=?,
+        date=?
     WHERE part_id=?
     `;
 
@@ -68,6 +71,7 @@ const updateInventory = (id, part, callback) => {
         part.mrp,
         part.selling_price,
         part.supplier,
+        part.date,
         id
     ], callback);
 
