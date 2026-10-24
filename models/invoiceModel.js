@@ -39,8 +39,8 @@ const getAllInvoices = (callback) => {
 
 };
 
-// Get Invoice By ID
-const getInvoiceById = (id, callback) => {
+// Get Invoice By ID (parallel queries for faster response)
+const getInvoiceById = async (id, callback) => {
 
     const sql = `
     SELECT
@@ -78,13 +78,13 @@ const getInvoiceById = (id, callback) => {
     WHERE i.invoice_id = ?
     `;
 
-    db.query(sql, [id], (err, result) => {
+    try {
+        const promisePool = db.promise();
+        const [result] = await promisePool.query(sql, [id]);
 
-        if (err)
-            return callback(err);
-
-        if (result.length === 0)
+        if (!result || result.length === 0) {
             return callback(null, []);
+        }
 
         const invoice = result[0];
 
@@ -99,131 +99,119 @@ const getInvoiceById = (id, callback) => {
         WHERE job_id = ?
         `;
 
-        db.query(serviceSql, [invoice.job_id], (err, services) => {
-
-            if (err)
-                return callback(err);
-
-            const partSql = `
-            SELECT
-                job_part_id,
-                part_name,
-                quantity,
-                unit_price,
-                total_amount
-            FROM job_parts
-            WHERE job_id = ?
-            `;
-
-            db.query(partSql, [invoice.job_id], (err, parts) => {
-
-                if (err)
-                    return callback(err);
-
-                invoice.services = services || [];
-                invoice.parts = parts || [];
-
-                callback(null, [invoice]);
-
-            });
-
-        });
-
-    });
-
-};
-
-// Create Invoice
-const createInvoice = (invoice, callback) => {
-
-    const labourSql = `
-    SELECT IFNULL(SUM(total_amount),0) AS labourTotal
-    FROM job_services
-    WHERE job_id = ?
-    `;
-
-    db.query(labourSql, [invoice.job_id], (err, labourResult) => {
-
-        if (err)
-            return callback(err);
-
-        const labourTotal =
-            Number(labourResult[0].labourTotal);
-
-        const partsSql = `
-        SELECT IFNULL(SUM(total_amount),0) AS partsTotal
+        const partSql = `
+        SELECT
+            job_part_id,
+            part_name,
+            quantity,
+            unit_price,
+            total_amount
         FROM job_parts
         WHERE job_id = ?
         `;
 
-        db.query(partsSql, [invoice.job_id], (err, partsResult) => {
+        const [[services], [parts]] = await Promise.all([
+            promisePool.query(serviceSql, [invoice.job_id]),
+            promisePool.query(partSql, [invoice.job_id])
+        ]);
 
-            if (err)
-                return callback(err);
+        invoice.services = services || [];
+        invoice.parts = parts || [];
 
-            const partsTotal =
-                Number(partsResult[0].partsTotal);
+        callback(null, [invoice]);
+    } catch (err) {
+        callback(err);
+    }
 
-            const subtotal =
-                labourTotal + partsTotal;
+};
 
-            const tax =
-                Number(invoice.tax || 0);
+// Create Invoice (parallel queries for faster creation)
+const createInvoice = async (invoice, callback) => {
 
-            const totalAmount =
-                subtotal + tax;
+    const labourSql = `
+    SELECT COALESCE(SUM(total_amount),0) AS "labourTotal"
+    FROM job_services
+    WHERE job_id = ?
+    `;
 
-            const paidAmount =
-                Number(invoice.paid_amount || 0);
+    const partsSql = `
+    SELECT COALESCE(SUM(total_amount),0) AS "partsTotal"
+    FROM job_parts
+    WHERE job_id = ?
+    `;
 
-            const balanceAmount =
-                totalAmount - paidAmount;
+    try {
+        const promisePool = db.promise();
+        const [[labourResult], [partsResult]] = await Promise.all([
+            promisePool.query(labourSql, [invoice.job_id]),
+            promisePool.query(partsSql, [invoice.job_id])
+        ]);
 
-            let status = "Unpaid";
+        const labourTotal =
+            Number(labourResult[0]?.labourTotal ?? labourResult[0]?.labourtotal ?? 0);
 
-            if (balanceAmount === 0)
-                status = "Paid";
-            else if (paidAmount > 0)
-                status = "Partial";
+        const partsTotal =
+            Number(partsResult[0]?.partsTotal ?? partsResult[0]?.partstotal ?? 0);
 
-            const invoiceNumber =
-                "INV-" + Date.now();
+        const subtotal =
+            labourTotal + partsTotal;
 
-            const sql = `
-            INSERT INTO invoices
-            (
-                job_id,
-                invoice_number,
-                invoice_date,
+        const tax =
+            Number(invoice.tax || 0);
+
+        const totalAmount =
+            subtotal + tax;
+
+        const paidAmount =
+            Number(invoice.paid_amount || 0);
+
+        const balanceAmount =
+            totalAmount - paidAmount;
+
+        let status = "Unpaid";
+
+        if (balanceAmount === 0)
+            status = "Paid";
+        else if (paidAmount > 0)
+            status = "Partial";
+
+        const invoiceNumber =
+            "INV-" + Date.now();
+
+        const sql = `
+        INSERT INTO invoices
+        (
+            job_id,
+            invoice_number,
+            invoice_date,
+            subtotal,
+            tax,
+            total_amount,
+            paid_amount,
+            balance_amount,
+            status
+        )
+        VALUES (?,?,?,?,?,?,?,?,?)
+        `;
+
+        db.query(
+            sql,
+            [
+                invoice.job_id,
+                invoiceNumber,
+                new Date(),
                 subtotal,
                 tax,
-                total_amount,
-                paid_amount,
-                balance_amount,
+                totalAmount,
+                paidAmount,
+                balanceAmount,
                 status
-            )
-            VALUES (?,?,?,?,?,?,?,?,?)
-            `;
-
-            db.query(
-                sql,
-                [
-                    invoice.job_id,
-                    invoiceNumber,
-                    new Date(),
-                    subtotal,
-                    tax,
-                    totalAmount,
-                    paidAmount,
-                    balanceAmount,
-                    status
-                ],
-                callback
-            );
-
-        });
-
-    });
+            ],
+            callback
+        );
+    } catch (err) {
+        callback(err);
+    }
 
 };
 
@@ -313,15 +301,15 @@ const searchInvoice = (keyword, callback) => {
 
     WHERE
 
-        i.invoice_number LIKE ?
+        i.invoice_number ILIKE ?
 
         OR
 
-        c.customer_name LIKE ?
+        c.customer_name ILIKE ?
 
         OR
 
-        v.vehicle_number LIKE ?
+        v.vehicle_number ILIKE ?
 
     `;
 
@@ -348,19 +336,23 @@ const searchInvoice = (keyword, callback) => {
 // Update Invoice Payment
 const updateInvoice = (id, invoice, callback) => {
 
-    const balanceAmount =
-        invoice.total_amount - invoice.paid_amount;
+    const totalAmount = Number(invoice.total_amount || 0);
+    const paidAmount = Number(invoice.paid_amount || 0);
+    const subtotal = Number(invoice.subtotal ?? totalAmount);
+    const balanceAmount = Math.max(0, totalAmount - paidAmount);
 
     let status = "Unpaid";
 
     if (balanceAmount === 0)
         status = "Paid";
-    else if (invoice.paid_amount > 0)
+    else if (paidAmount > 0)
         status = "Partial";
 
     const sql = `
     UPDATE invoices
     SET
+        subtotal=?,
+        total_amount=?,
         paid_amount=?,
         balance_amount=?,
         status=?
@@ -370,7 +362,9 @@ const updateInvoice = (id, invoice, callback) => {
     db.query(
         sql,
         [
-            invoice.paid_amount,
+            subtotal,
+            totalAmount,
+            paidAmount,
             balanceAmount,
             status,
             id

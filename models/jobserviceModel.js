@@ -4,17 +4,15 @@ const db = require("../config/db");
 const getAllJobServices = (callback) => {
     const sql = `
     SELECT
-        js.job_service_id,
-        js.job_id,
-        s.service_name,
-        js.quantity,
-        js.labour_charge,
-        js.total_amount,
-        js.is_completed
-    FROM job_services js
-    JOIN services s
-    ON js.service_id = s.service_id
-    ORDER BY js.job_service_id DESC
+        job_service_id,
+        job_id,
+        service_name,
+        quantity,
+        labour_charge,
+        total_amount,
+        is_completed
+    FROM job_services
+    ORDER BY job_service_id DESC
     `;
     db.query(sql, callback);
 };
@@ -23,17 +21,15 @@ const getAllJobServices = (callback) => {
 const getJobServicesByJobId = (jobId, callback) => {
     const sql = `
     SELECT
-        js.job_service_id,
-        js.job_id,
-        s.service_name,
-        js.quantity,
-        js.labour_charge,
-        js.total_amount,
-        js.is_completed
-    FROM job_services js
-    JOIN services s
-    ON js.service_id = s.service_id
-    WHERE js.job_id = ?
+        job_service_id,
+        job_id,
+        service_name,
+        quantity,
+        labour_charge,
+        total_amount,
+        is_completed
+    FROM job_services
+    WHERE job_id = ?
     `;
     db.query(sql, [jobId], callback);
 };
@@ -41,13 +37,15 @@ const getJobServicesByJobId = (jobId, callback) => {
 // Add Job Service
 const addJobService = (service, callback) => {
     const totalAmount =
-        service.quantity * service.labour_charge;
+        service.total_amount != null
+            ? service.total_amount
+            : service.quantity * service.labour_charge;
 
     const sql = `
     INSERT INTO job_services
     (
         job_id,
-        service_id,
+        service_name,
         quantity,
         labour_charge,
         total_amount,
@@ -60,7 +58,7 @@ const addJobService = (service, callback) => {
         sql,
         [
             service.job_id,
-            service.service_id,
+            service.service_name,
             service.quantity,
             service.labour_charge,
             totalAmount,

@@ -13,7 +13,8 @@ const pool = new Pool({
     ssl: process.env.NODE_ENV === "production"
         ? { rejectUnauthorized: false }
         : { rejectUnauthorized: false },
-    max: Number(process.env.DB_POOL_MAX || 5),
+    max: Number(process.env.DB_POOL_MAX || 10),
+    keepAlive: true,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000
 });
@@ -39,7 +40,10 @@ function convertPlaceholders(sql) {
 function prepareSql(sql) {
     let prepared = sql
         .replace(/\bIFNULL\s*\(/gi, "COALESCE(")
-        .replace(/\bCURDATE\s*\(\s*\)/gi, "CURRENT_DATE");
+        .replace(/\bCURDATE\s*\(\s*\)/gi, "CURRENT_DATE")
+        .replace(/\bWEEK\s*\(([^()]+)\)/gi, "EXTRACT(WEEK FROM $1)")
+        .replace(/\bMONTH\s*\(([^()]+)\)/gi, "EXTRACT(MONTH FROM $1)")
+        .replace(/\bYEAR\s*\(([^()]+)\)/gi, "EXTRACT(YEAR FROM $1)");
 
     const insertMatch = prepared.match(/INSERT\s+INTO\s+([a-zA-Z_][a-zA-Z0-9_]*)/i);
     if (insertMatch && !/\bRETURNING\b/i.test(prepared)) {
@@ -95,7 +99,27 @@ const db = {
 };
 
 pool.query("SELECT 1")
-    .then(() => console.log("PostgreSQL connected via Supabase pool"))
+    .then(() => {
+        console.log("PostgreSQL connected via Supabase pool");
+        // Auto-repair any invoices that were stored with NaN values
+        return pool.query(`
+            UPDATE invoices i
+            SET
+                subtotal = COALESCE((SELECT SUM(total_amount) FROM job_services WHERE job_id = i.job_id), 0)
+                         + COALESCE((SELECT SUM(total_amount) FROM job_parts WHERE job_id = i.job_id), 0),
+                total_amount = COALESCE((SELECT SUM(total_amount) FROM job_services WHERE job_id = i.job_id), 0)
+                             + COALESCE((SELECT SUM(total_amount) FROM job_parts WHERE job_id = i.job_id), 0)
+                             + COALESCE(NULLIF(i.tax, 'NaN'::numeric), 0),
+                balance_amount = (
+                    COALESCE((SELECT SUM(total_amount) FROM job_services WHERE job_id = i.job_id), 0)
+                    + COALESCE((SELECT SUM(total_amount) FROM job_parts WHERE job_id = i.job_id), 0)
+                    + COALESCE(NULLIF(i.tax, 'NaN'::numeric), 0)
+                ) - COALESCE(NULLIF(i.paid_amount, 'NaN'::numeric), 0)
+            WHERE i.total_amount = 'NaN'::numeric
+               OR i.balance_amount = 'NaN'::numeric
+               OR i.subtotal = 'NaN'::numeric
+        `);
+    })
     .catch(err => console.error("Database Connection Failed:", err.message));
 
 module.exports = db;

@@ -7,40 +7,40 @@ const getDashboard = async (callback) => {
     SELECT
 
     (
-        SELECT IFNULL(SUM(total_amount),0)
+        SELECT COALESCE(SUM(total_amount),0)
         FROM invoices
         WHERE EXTRACT(WEEK FROM invoice_date)=EXTRACT(WEEK FROM CURRENT_DATE)
         AND EXTRACT(YEAR FROM invoice_date)=EXTRACT(YEAR FROM CURRENT_DATE)
-    ) AS weekRevenue,
+    ) AS "weekRevenue",
 
     (
-        SELECT IFNULL(SUM(total_amount),0)
+        SELECT COALESCE(SUM(total_amount),0)
         FROM invoices
         WHERE EXTRACT(MONTH FROM invoice_date)=EXTRACT(MONTH FROM CURRENT_DATE)
         AND EXTRACT(YEAR FROM invoice_date)=EXTRACT(YEAR FROM CURRENT_DATE)
-    ) AS monthRevenue,
+    ) AS "monthRevenue",
 
     (
-        SELECT IFNULL(SUM(total_amount),0)
+        SELECT COALESCE(SUM(total_amount),0)
         FROM job_services
-    ) AS labourRevenue,
+    ) AS "labourRevenue",
 
     (
-        SELECT IFNULL(SUM(jp.quantity * (jp.unit_price - IFNULL(i.unit_price, jp.unit_price))), 0)
+        SELECT COALESCE(SUM(jp.quantity * (jp.unit_price - COALESCE(i.unit_price, jp.unit_price))), 0)
         FROM job_parts jp
         LEFT JOIN inventory i ON jp.part_id = i.part_id
-    ) AS partsRevenue,
+    ) AS "partsRevenue",
 
     (
         SELECT COUNT(*)
         FROM job_cards
         WHERE status='Open'
-    ) AS activeJobs,
+    ) AS "activeJobs",
 
     (
         SELECT COUNT(*)
         FROM customers
-    ) AS totalCustomers;
+    ) AS "totalCustomers";
     `;
 
     const recentSql = `
@@ -88,16 +88,18 @@ LIMIT 5
 const weeklyChartSql = `
 SELECT DATE(invoice_date) as date, SUM(total_amount) as total
 FROM invoices
-WHERE WEEK(invoice_date)=WEEK(CURDATE()) AND YEAR(invoice_date)=YEAR(CURDATE())
+WHERE EXTRACT(WEEK FROM invoice_date)=EXTRACT(WEEK FROM CURRENT_DATE)
+  AND EXTRACT(YEAR FROM invoice_date)=EXTRACT(YEAR FROM CURRENT_DATE)
 GROUP BY DATE(invoice_date)
 ORDER BY date ASC
 `;
 
 const monthlyChartSql = `
-SELECT WEEK(invoice_date) as week, SUM(total_amount) as total
+SELECT EXTRACT(WEEK FROM invoice_date) as week, SUM(total_amount) as total
 FROM invoices
-WHERE MONTH(invoice_date)=MONTH(CURDATE()) AND YEAR(invoice_date)=YEAR(CURDATE())
-GROUP BY WEEK(invoice_date)
+WHERE EXTRACT(MONTH FROM invoice_date)=EXTRACT(MONTH FROM CURRENT_DATE)
+  AND EXTRACT(YEAR FROM invoice_date)=EXTRACT(YEAR FROM CURRENT_DATE)
+GROUP BY EXTRACT(WEEK FROM invoice_date)
 ORDER BY week ASC
 `;
 
@@ -168,19 +170,19 @@ const globalSearch = (keyword, callback) => {
 
     WHERE
 
-        c.customer_name LIKE ?
+        c.customer_name ILIKE ?
 
         OR
 
-        c.phone LIKE ?
+        c.phone ILIKE ?
 
         OR
 
-        v.vehicle_number LIKE ?
+        v.vehicle_number ILIKE ?
 
         OR
 
-        i.invoice_number LIKE ?
+        i.invoice_number ILIKE ?
 
     LIMIT 10
 

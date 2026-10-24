@@ -4,17 +4,17 @@ const getExpenses = async (callback) => {
     const sql = `
     SELECT
     (
-        SELECT IFNULL(SUM(unit_price * stock_quantity), 0)
+        SELECT COALESCE(SUM(unit_price * stock_quantity), 0)
         FROM inventory
         WHERE EXTRACT(WEEK FROM created_at) = EXTRACT(WEEK FROM CURRENT_DATE)
         AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
-    ) AS weeklyExpenses,
+    ) AS "weeklyExpenses",
     (
-        SELECT IFNULL(SUM(unit_price * stock_quantity), 0)
+        SELECT COALESCE(SUM(unit_price * stock_quantity), 0)
         FROM inventory
         WHERE EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM CURRENT_DATE)
         AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
-    ) AS monthlyExpenses
+    ) AS "monthlyExpenses"
     `;
 
     const listSql = `
