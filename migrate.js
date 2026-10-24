@@ -1,30 +1,25 @@
 require("dotenv").config();
 const db = require("./config/db");
 
-const addJobServicesColumn = `ALTER TABLE job_services ADD COLUMN is_completed BOOLEAN DEFAULT FALSE;`;
-const addJobPartsColumn = `ALTER TABLE job_parts ADD COLUMN is_completed BOOLEAN DEFAULT FALSE;`;
+const statements = [
+    `ALTER TABLE job_services ADD COLUMN IF NOT EXISTS is_completed BOOLEAN DEFAULT FALSE`,
+    `ALTER TABLE job_parts ADD COLUMN IF NOT EXISTS is_completed BOOLEAN DEFAULT FALSE`,
+    `ALTER TABLE inventory ADD COLUMN IF NOT EXISTS mrp NUMERIC(10,2) DEFAULT 0`,
+    `ALTER TABLE inventory ADD COLUMN IF NOT EXISTS selling_price NUMERIC(10,2) DEFAULT 0`,
+    `ALTER TABLE inventory ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()`
+];
 
-db.query(addJobServicesColumn, (err) => {
-    if (err) {
-        if (err.code === 'ER_DUP_FIELDNAME') {
-            console.log("is_completed already exists on job_services");
-        } else {
-            console.error("Error adding to job_services:", err);
+(async () => {
+    try {
+        for (const sql of statements) {
+            await db.pool.query(sql);
+            console.log(`OK: ${sql}`);
         }
-    } else {
-        console.log("Added is_completed to job_services");
+        console.log("PostgreSQL migrations completed.");
+    } catch (err) {
+        console.error("Migration failed:", err);
+        process.exitCode = 1;
+    } finally {
+        await db.pool.end();
     }
-
-    db.query(addJobPartsColumn, (err) => {
-        if (err) {
-            if (err.code === 'ER_DUP_FIELDNAME') {
-                console.log("is_completed already exists on job_parts");
-            } else {
-                console.error("Error adding to job_parts:", err);
-            }
-        } else {
-            console.log("Added is_completed to job_parts");
-        }
-        process.exit();
-    });
-});
+})();

@@ -1,9 +1,15 @@
-require('dotenv').config();
-const db = require('./config/db');
+require("dotenv").config();
+const db = require("./config/db");
 
-const sql = `ALTER TABLE inventory ADD COLUMN mrp DECIMAL(10,2) DEFAULT 0, ADD COLUMN selling_price DECIMAL(10,2) DEFAULT 0`;
-db.query(sql, (err, result) => {
-    if (err) console.error("Error:", err);
-    else console.log("Table altered successfully!");
-    process.exit();
-});
+(async () => {
+    try {
+        await db.pool.query(`ALTER TABLE inventory ADD COLUMN IF NOT EXISTS mrp NUMERIC(10,2) DEFAULT 0`);
+        await db.pool.query(`ALTER TABLE inventory ADD COLUMN IF NOT EXISTS selling_price NUMERIC(10,2) DEFAULT 0`);
+        console.log("Inventory table updated successfully.");
+    } catch (err) {
+        console.error("Error:", err);
+        process.exitCode = 1;
+    } finally {
+        await db.pool.end();
+    }
+})();

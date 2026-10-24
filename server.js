@@ -30,8 +30,10 @@ app.use("/jobservices", jobServiceRoutes);
 app.use("/jobparts", jobPartRoutes);
 app.use("/expenses", expenseRoutes);
 
-app.listen(process.env.PORT,()=>{
+const PORT = process.env.PORT || 10000;
 
-console.log("Server Running");
+app.listen(PORT,()=>{
+
+console.log(`Server Running on port ${PORT}`);
 
 });

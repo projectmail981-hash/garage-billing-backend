@@ -6,14 +6,14 @@ const getExpenses = async (callback) => {
     (
         SELECT IFNULL(SUM(unit_price * stock_quantity), 0)
         FROM inventory
-        WHERE WEEK(created_at) = WEEK(CURDATE())
-        AND YEAR(created_at) = YEAR(CURDATE())
+        WHERE EXTRACT(WEEK FROM created_at) = EXTRACT(WEEK FROM CURRENT_DATE)
+        AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
     ) AS weeklyExpenses,
     (
         SELECT IFNULL(SUM(unit_price * stock_quantity), 0)
         FROM inventory
-        WHERE MONTH(created_at) = MONTH(CURDATE())
-        AND YEAR(created_at) = YEAR(CURDATE())
+        WHERE EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM CURRENT_DATE)
+        AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
     ) AS monthlyExpenses
     `;
 

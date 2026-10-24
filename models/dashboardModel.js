@@ -9,15 +9,15 @@ const getDashboard = async (callback) => {
     (
         SELECT IFNULL(SUM(total_amount),0)
         FROM invoices
-        WHERE WEEK(invoice_date)=WEEK(CURDATE())
-        AND YEAR(invoice_date)=YEAR(CURDATE())
+        WHERE EXTRACT(WEEK FROM invoice_date)=EXTRACT(WEEK FROM CURRENT_DATE)
+        AND EXTRACT(YEAR FROM invoice_date)=EXTRACT(YEAR FROM CURRENT_DATE)
     ) AS weekRevenue,
 
     (
         SELECT IFNULL(SUM(total_amount),0)
         FROM invoices
-        WHERE MONTH(invoice_date)=MONTH(CURDATE())
-        AND YEAR(invoice_date)=YEAR(CURDATE())
+        WHERE EXTRACT(MONTH FROM invoice_date)=EXTRACT(MONTH FROM CURRENT_DATE)
+        AND EXTRACT(YEAR FROM invoice_date)=EXTRACT(YEAR FROM CURRENT_DATE)
     ) AS monthRevenue,
 
     (
