@@ -6,6 +6,7 @@ const getAllJobParts = (callback) => {
     SELECT
         jp.job_part_id,
         jp.job_id,
+        jp.part_id,
         COALESCE(i.part_name, jp.part_name) AS part_name,
         jp.quantity,
         jp.unit_price,
@@ -25,6 +26,7 @@ const getJobPartsByJobId = (jobId, callback) => {
     SELECT
         jp.job_part_id,
         jp.job_id,
+        jp.part_id,
         COALESCE(i.part_name, jp.part_name) AS part_name,
         jp.quantity,
         jp.unit_price,
